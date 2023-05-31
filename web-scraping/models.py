@@ -17,11 +17,6 @@ class URLType:
     ACCESS_URL = "access url"
 
 
-class ObjectType:
-    BUSINESS = "business"
-    REVIEW = "review"
-
-
 # main models
 class Business:
     """
@@ -152,7 +147,7 @@ class URL:
             self,
             url: str,
             url_type: URLType,
-            object_type: ObjectType,
+            object_type: MongoReviewCollectionType,
             page_of_pagination: int = 0  # 0 = not a pagination url
     ):
         self.url = url
@@ -230,7 +225,7 @@ print(business.get_object_hash())
 print(business.to_mongo_document())
 reviewer = Reviewer(reviewer_username="tom", reviewer_name="jerry")
 item = Review(reviewer=reviewer, business=business)
-url = URL(url_type=URLType.ACCESS_URL,object_type=ObjectType.BUSINESS,url="this is a url")
+url = URL(url_type=URLType.ACCESS_URL,object_type=MongoReviewCollectionType.BUSINESS,url="this is a url")
 
 
 review = Review(
