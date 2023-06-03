@@ -12,6 +12,7 @@ class MongoDocumentType:
     BUSINESS = "business"
     REVIEW = "review"
 
+
 # main models
 class Business:
     """
@@ -148,7 +149,8 @@ class TripAdvisorMongoClient:
 
         return [{k: v for k, v in doc.items() if k not in ['_id', 'unique_id', 'type']} for doc in reviews]
 
-class TripAdvisorWebScrapper():
+
+class TripAdvisorWebScrapper:
     def __init__(
             self,
             web_driver: webdriver = None,
@@ -161,11 +163,10 @@ class TripAdvisorWebScrapper():
         self.trip_advisor_mongo_client = trip_advisor_mongo_client
         self.TRIP_ADVISOR_URL = 'https://www.tripadvisor.com'
 
-
-
     def get_and_store_businesses(self, start_url: str) -> list[Business]:
         next_page_arrow_class = "BrOJk u j z _F wSSLS tIqAi unMkR"
         business_class = "alPVI eNNhq PgLKC tnGGX"
+
         def find_next_page_arrow(current_page: bs4.BeautifulSoup) -> bs4.element.Tag or None:
             next_or_prev_arrows = current_page.find_all("a", class_=next_page_arrow_class)
             for element in next_or_prev_arrows:
@@ -211,7 +212,8 @@ class TripAdvisorWebScrapper():
 
     def get_and_store_reviews(self, businesses: list[dict]) -> list[Review]:
         next_page_arrow_class = "BrOJk u j z _F wSSLS tIqAi unMkR"
-        def get_all_reviews_in_page(current_page: bs4.BeautifulSoup,business: list[dict]) -> list[Review]:
+
+        def get_all_reviews_in_page(current_page: bs4.BeautifulSoup, business: dict) -> list[Review]:
             reviews = []
             review_cards = current_page.find_all('div', class_='_c', attrs={'data-automation': 'reviewCard'})
             for card in review_cards:
@@ -226,10 +228,11 @@ class TripAdvisorWebScrapper():
                     aria_label = review_element.get('aria-label')
                     rating_value = re.search(r'([\d.]+)\s*of', aria_label).group(1)
                     review_rating = int(float(rating_value))
-                    review_visit = card.find('div', class_='TreSq').find('div', class_='biGQs _P pZUbB ncFvv osNWb').text.strip()
+                    review_visit = card.find('div', class_='TreSq').find('div',
+                                                                         class_='biGQs _P pZUbB ncFvv osNWb').text.strip()
                     visit_date_str = review_visit.replace("Written ", "")
                     review_visit_date = datetime.strptime(visit_date_str, "%B %d, %Y").date()
-                except Exception as error:
+                except:
                     continue
 
                 business_obj = Business(
@@ -238,17 +241,18 @@ class TripAdvisorWebScrapper():
                 )
                 reviews.append(
                     Review(
-                        business = business_obj,
-                        reviewer = review_username,
-                        review_date = review_date,
-                        visit_data = review_visit_date,
-                        review_title= review_title,
-                        review_text= review_text,
-                        review_rating= review_rating
+                        business=business_obj,
+                        reviewer=review_username,
+                        review_date=review_date,
+                        visit_data=review_visit_date,
+                        review_title=review_title,
+                        review_text=review_text,
+                        review_rating=review_rating
                     )
                 )
 
             return reviews
+
         def find_next_page_arrow(current_page: bs4.BeautifulSoup) -> bs4.element.Tag or None:
             next_or_prev_arrows = current_page.find_all("a", class_=next_page_arrow_class)
             for element in next_or_prev_arrows:
@@ -261,7 +265,7 @@ class TripAdvisorWebScrapper():
             self.web_driver.get(business['business_url'])
             while True:
                 current_page = bs4.BeautifulSoup(self.web_driver.page_source, 'html.parser')
-                reviews_in_current_page = get_all_reviews_in_page(current_page,business)
+                reviews_in_current_page = get_all_reviews_in_page(current_page, business)
                 for review in reviews_in_current_page:
                     self.trip_advisor_mongo_client.insert_review(review)
                     reviews.append(review)
