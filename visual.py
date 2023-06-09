@@ -398,8 +398,81 @@ plt.tight_layout()
 plt.show()
 
 
+
 # 5. Identify the 10 fastest growing and 10 fastest shrinking words over time (based on usage frequency)
 # Code to calculate the frequency change of words over time goes here
+from nltk.corpus import stopwords
+from nltk import FreqDist, word_tokenize
+import string
+import matplotlib.pyplot as plt
+
+# Fetch reviews from MongoDB
+reviews = collection.find()
+
+# Extract the review text from each document
+review_texts = [review.get("review_text", "") for review in reviews]
+
+# Convert the reviews into a single string
+all_reviews = ' '.join(review_texts)
+
+# Tokenize the text into words
+words = word_tokenize(all_reviews)
+
+# Remove stopwords and punctuation marks
+stop_words = set(stopwords.words('english'))
+words = [word for word in words if word not in stop_words and word not in string.punctuation]
+
+# Calculate the frequency distribution of words
+freq_dist = FreqDist(words)
+
+# Calculate the total number of words
+total_words = len(words)
+
+# Calculate the frequency change of each word
+freq_change = {}
+for word in freq_dist.keys():
+    freq_change[word] = freq_dist[word] / total_words
+
+# Sort the words based on frequency change
+sorted_words = sorted(freq_change.items(), key=lambda x: x[1], reverse=True)
+
+# Get the top 10 growing words
+top_growing_words = sorted_words[:10]
+
+# Get the top 10 shrinking words
+top_shrinking_words = sorted_words[-10:]
+
+# Print the results
+print("Top 10 Growing Words:")
+for word, change in top_growing_words:
+    print(f"Word: {word}, Frequency: {change}")
+
+print("\nTop 10 Shrinking Words:")
+for word, change in top_shrinking_words:
+    print(f"Word: {word}, Frequency: {change}")
+
+# # Extract the words and frequency change values
+# words = [word for word, _ in sorted_words]
+# freq_changes = [change for _, change in sorted_words]
+#
+# # Create a figure and axis
+# fig, ax = plt.subplots(figsize=(12, 6))
+#
+# # Plot the frequency change values as a bar plot
+# ax.bar(words, freq_changes, color='blue')
+#
+# # Set labels and title
+# ax.set_xlabel('Words')
+# ax.set_ylabel('Relative Frequency Change')
+# ax.set_title('Frequency Change of Words Over Time')
+#
+# # Rotate x-axis labels for better visibility
+# plt.xticks(rotation=45, ha='right')
+#
+# plt.tight_layout()
+# plt.show()
+#
+
 
 # 6. Explore and visualize emerging topics from user reviews across time (using techniques like topic modeling or clustering)
 # Code to perform topic modeling or clustering on the review texts goes here
