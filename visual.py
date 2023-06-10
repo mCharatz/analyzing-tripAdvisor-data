@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 from datetime import datetime
 import nltk
+import pyLDAvis as pyLDAvis
+from gensim import corpora
 nltk.download('stopwords')
 nltk.download('punkt')
 from nltk.corpus import stopwords
@@ -13,6 +15,15 @@ import matplotlib.pyplot as plt
 from nltk import FreqDist, word_tokenize, bigrams, trigrams
 from wordcloud import WordCloud
 import random
+import re
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+from nltk.corpus import stopwords as greek_stopwords
+import gensim.corpora
+import pyLDAvis.gensim_models as gensimvis
+import pyLDAvis
+import matplotlib.pyplot as plt
 
 from pymongo import MongoClient
 
@@ -475,5 +486,57 @@ for word, change in top_shrinking_words:
 
 
 # 6. Explore and visualize emerging topics from user reviews across time (using techniques like topic modeling or clustering)
-# Code to perform topic modeling or clustering on the review texts goes here
-# Additional analysis steps can be added as per your requirements
+
+# Download the necessary resources
+nltk.download('punkt')
+nltk.download('stopwords')
+nltk.download('wordnet')
+
+# Define the stop words lists
+english_stopwords = set(stopwords.words('english'))
+greek_stopwords = set(greek_stopwords.words('greek'))
+
+# Initialize the lemmatizer
+lemmatizer = WordNetLemmatizer()
+
+# Preprocess the reviews and create a list of tokenized texts
+texts = []
+review_dates = []  # Store the review dates
+
+for review in reviews:
+    if 'review_text' in review:
+        text = review['review_text']
+        review_date = review['review_date']
+        # Convert to lowercase
+        text = text.lower()
+        # Remove punctuation
+        text = re.sub(r'[^\w\s]', '', text)
+        # Tokenize the text
+        tokens = word_tokenize(text)
+        # Remove stop words and perform lemmatization
+        preprocessed_text = [lemmatizer.lemmatize(token) for token in tokens if
+                             token.lower() not in english_stopwords and token.lower() not in greek_stopwords]
+        # Append the preprocessed text to the list of texts
+        texts.append(preprocessed_text)
+        review_dates.append(review_date)
+
+# Create a dictionary from the tokenized texts
+dictionary = gensim.corpora.Dictionary(texts)
+
+# Create a corpus from the tokenized texts
+corpus = [dictionary.doc2bow(text) for text in texts]
+
+# Build the LDA model
+lda_model = gensim.models.LdaModel(corpus, id2word=dictionary, num_topics=10)
+
+# Visualize the topics using the modified LDAvis visualization
+topic_data = gensimvis.prepare(lda_model, corpus, dictionary)
+
+# Save the modified LDAvis HTML file
+pyLDAvis.save_html(topic_data, 'lda_visualization.html')
+
+# Print the topic model results
+print(lda_model.print_topics())
+
+# Show the plot
+plt.show()
