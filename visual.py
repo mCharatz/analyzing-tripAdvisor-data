@@ -6,7 +6,6 @@ from gensim import corpora
 nltk.download('stopwords')
 nltk.download('punkt')
 from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
 from nltk.probability import FreqDist
 from nltk.stem import PorterStemmer
 import numpy as np
@@ -17,14 +16,12 @@ from wordcloud import WordCloud
 import random
 import re
 from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords as greek_stopwords
 import gensim.corpora
 import pyLDAvis.gensim_models as gensimvis
 import pyLDAvis
 import matplotlib.pyplot as plt
-
 from pymongo import MongoClient
 
 # Connect to MongoDB
