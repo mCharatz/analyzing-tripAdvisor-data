@@ -489,9 +489,14 @@ nltk.download('punkt')
 nltk.download('stopwords')
 nltk.download('wordnet')
 
-# Define the stop words lists
-english_stopwords = set(stopwords.words('english'))
-greek_stopwords = set(greek_stopwords.words('greek'))
+# Define the stop words list for English
+english_stop_words = set(stopwords.words('english'))
+
+# Define the stop words list for Greek
+greek_stop_words = set(stopwords.words('greek'))
+
+# Combine the English and Greek stop words
+stop_words = english_stop_words.union(greek_stop_words)
 
 # Initialize the lemmatizer
 lemmatizer = WordNetLemmatizer()
@@ -511,8 +516,7 @@ for review in reviews:
         # Tokenize the text
         tokens = word_tokenize(text)
         # Remove stop words and perform lemmatization
-        preprocessed_text = [lemmatizer.lemmatize(token) for token in tokens if
-                             token.lower() not in english_stopwords and token.lower() not in greek_stopwords]
+        preprocessed_text = [lemmatizer.lemmatize(token) for token in tokens if token not in stop_words]
         # Append the preprocessed text to the list of texts
         texts.append(preprocessed_text)
         review_dates.append(review_date)
