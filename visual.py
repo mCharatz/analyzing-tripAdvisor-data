@@ -62,21 +62,31 @@ for date in review_dates:
 sorted_months = sorted(monthly_reviews.keys())
 review_counts = [monthly_reviews[month] for month in sorted_months]
 
-plt.plot(sorted_months, review_counts)
+plt.figure(figsize=(10, 6))
+sns.set_style("whitegrid")
+sns.lineplot(x=sorted_months, y=review_counts, marker='o', color='steelblue')
 plt.xlabel("Month")
 plt.ylabel("Number of Reviews")
 plt.title("Number of Monthly Reviews")
 plt.xticks(rotation=45)
+
+# Specify the x-axis tick interval
+interval = max(1, len(sorted_months) // 25)  # Adjust the interval as needed
+plt.xticks(np.arange(0, len(sorted_months), interval), [sorted_months[i] for i in range(0, len(sorted_months), interval)])
+
+plt.tight_layout()
 plt.show()
 
 # Fetch reviews from MongoDB and convert to a list
 reviews = list(collection.find())
 
 # 2. Identify the top-10 rated and bottom-10 rated locations
+import matplotlib.pyplot as plt
+
 locations = {}  # Dictionary to store location ratings and counts
 
 for review in reviews:
-    location = review.get("business_reviewed")  # Use "business_reviewed" instead of "business_name"
+    location = review.get("business_reviewed")
     rating = review.get("review_rating")
     if location and rating:
         if location not in locations:
@@ -85,7 +95,13 @@ for review in reviews:
             locations[location]["count"] += 1
             locations[location]["rating"] += rating
 
-sorted_locations = sorted(locations.items(), key=lambda x: (x[1]["rating"] / x[1]["count"]), reverse=True)
+# Filter locations based on minimum number of ratings
+min_ratings_threshold = 50
+filtered_locations = {
+    location: data for location, data in locations.items() if data["count"] >= min_ratings_threshold
+}
+
+sorted_locations = sorted(filtered_locations.items(), key=lambda x: (x[1]["count"], x[1]["rating"]), reverse=True)
 top_10_rated = sorted_locations[:10]
 bottom_10_rated = sorted_locations[-10:]
 
@@ -97,42 +113,17 @@ top_counts = [data["count"] for _, data in top_10_rated]
 bottom_locations = [location for location, _ in bottom_10_rated]
 bottom_ratings = [(data["rating"] / data["count"]) for _, data in bottom_10_rated]
 bottom_counts = [data["count"] for _, data in bottom_10_rated]
+
 print("Top 10 Rated Locations:")
 for location, data in top_10_rated:
     print(location, "- Average Rating:", data["rating"] / data["count"], "- Number of Ratings:", data["count"])
 print("\nBottom 10 Rated Locations:")
 for location, data in bottom_10_rated:
     print(location, "- Average Rating:", data["rating"] / data["count"], "- Number of Ratings:", data["count"])
-# Visualize the top-10 rated locations
-plt.figure(figsize=(10, 6))
-plt.barh(np.arange(len(top_locations)), top_ratings, color='green')
-plt.yticks(np.arange(len(top_locations)), top_locations)
-plt.xlabel('Average Rating')
-plt.ylabel('Locations')
-plt.title('Top 10 Rated Locations')
-plt.tight_layout()
-plt.show()
-
-# Visualize the bottom-10 rated locations
-plt.figure(figsize=(10, 6))
-plt.barh(np.arange(len(bottom_locations)), bottom_ratings, color='red')
-plt.yticks(np.arange(len(bottom_locations)), bottom_locations)
-plt.xlabel('Average Rating')
-plt.ylabel('Locations')
-plt.title('Bottom 10 Rated Locations')
-plt.tight_layout()
-plt.show()
-
-
-# 2nd visualisation
-# Set up the style and color palette
-sns.set_style("whitegrid")
-colors = sns.color_palette("coolwarm", len(top_locations))
 
 # Visualize the top-10 rated locations
-plt.figure(figsize=(10, 6))
-plt.barh(np.arange(len(top_locations)), top_ratings, color=colors)
-plt.yticks(np.arange(len(top_locations)), top_locations)
+plt.figure(figsize=(12, 8))
+sns.barplot(x=top_ratings, y=top_locations, palette='coolwarm_r')
 plt.xlabel('Average Rating')
 plt.ylabel('Locations')
 plt.title('Top 10 Rated Locations')
@@ -141,17 +132,12 @@ plt.title('Top 10 Rated Locations')
 for i, rating in enumerate(top_ratings):
     plt.text(rating + 0.1, i, f'{rating:.2f}', va='center', color='black')
 
-# Add a color legend
-legend_handles = [plt.Rectangle((0, 0), 1, 1, color=color) for color in colors]
-plt.legend(legend_handles, top_locations, loc='lower right', bbox_to_anchor=(1.1, 0.5))
-
 plt.tight_layout()
 plt.show()
 
 # Visualize the bottom-10 rated locations
-plt.figure(figsize=(10, 6))
-plt.barh(np.arange(len(bottom_locations)), bottom_ratings, color=colors[::-1])
-plt.yticks(np.arange(len(bottom_locations)), bottom_locations)
+plt.figure(figsize=(12, 8))
+sns.barplot(x=bottom_ratings, y=bottom_locations, palette='coolwarm')
 plt.xlabel('Average Rating')
 plt.ylabel('Locations')
 plt.title('Bottom 10 Rated Locations')
@@ -160,17 +146,14 @@ plt.title('Bottom 10 Rated Locations')
 for i, rating in enumerate(bottom_ratings):
     plt.text(rating + 0.1, i, f'{rating:.2f}', va='center', color='black')
 
-# Add a color legend
-legend_handles = [plt.Rectangle((0, 0), 1, 1, color=color) for color in colors[::-1]]
-plt.legend(legend_handles, bottom_locations, loc='lower right', bbox_to_anchor=(1.1, 0.5))
-
 plt.tight_layout()
 plt.show()
 
 
 
 
-# 3
+# 3. Which locations have the highest increase or decrease in rating over the years?
+# Consider calculating the yearly average and percentage change per location.
 import matplotlib.pyplot as plt
 
 yearly_ratings = {}
@@ -417,29 +400,45 @@ import matplotlib.pyplot as plt
 # Fetch reviews from MongoDB
 reviews = collection.find()
 
-# Extract the review text from each document
-review_texts = [review.get("review_text", "") for review in reviews]
+# Extract the review text and review date from each document
+review_texts = []
+review_dates = []
+for review in reviews:
+    if "review_text" in review:
+        review_texts.append(review["review_text"])
+    if "review_date" in review:
+        review_dates.append(review["review_date"])
 
-# Convert the reviews into a single string
-all_reviews = ' '.join(review_texts)
+# Combine review text and review date into a list of tuples
+review_data = list(zip(review_texts, review_dates))
 
-# Tokenize the text into words
-words = word_tokenize(all_reviews)
+# Sort the review data based on review date
+review_data.sort(key=lambda x: x[1])
 
-# Remove stopwords and punctuation marks
-stop_words = set(stopwords.words('english'))
-words = [word for word in words if word not in stop_words and word not in string.punctuation]
+# Initialize variables
+word_frequency = {}
+total_words = 0
 
-# Calculate the frequency distribution of words
-freq_dist = FreqDist(words)
+# Iterate over the review data
+for review_text, review_date in review_data:
+    # Tokenize the text into words
+    words = word_tokenize(review_text)
 
-# Calculate the total number of words
-total_words = len(words)
+    # Remove stopwords and punctuation marks
+    stop_words = set(stopwords.words('english'))
+    words = [word for word in words if word not in stop_words and word not in string.punctuation]
+
+    # Update word frequencies
+    for word in words:
+        if word not in word_frequency:
+            word_frequency[word] = 0
+        word_frequency[word] += 1
+        total_words += 1
 
 # Calculate the frequency change of each word
 freq_change = {}
-for word in freq_dist.keys():
-    freq_change[word] = freq_dist[word] / total_words
+for word, frequency in word_frequency.items():
+    freq_change[word] = frequency / total_words
 
 # Sort the words based on frequency change
 sorted_words = sorted(freq_change.items(), key=lambda x: x[1], reverse=True)
@@ -459,27 +458,27 @@ print("\nTop 10 Shrinking Words:")
 for word, change in top_shrinking_words:
     print(f"Word: {word}, Frequency: {change}")
 
-# # Extract the words and frequency change values
-# words = [word for word, _ in sorted_words]
-# freq_changes = [change for _, change in sorted_words]
-#
-# # Create a figure and axis
-# fig, ax = plt.subplots(figsize=(12, 6))
-#
-# # Plot the frequency change values as a bar plot
-# ax.bar(words, freq_changes, color='blue')
-#
-# # Set labels and title
-# ax.set_xlabel('Words')
-# ax.set_ylabel('Relative Frequency Change')
-# ax.set_title('Frequency Change of Words Over Time')
-#
-# # Rotate x-axis labels for better visibility
-# plt.xticks(rotation=45, ha='right')
-#
-# plt.tight_layout()
-# plt.show()
-#
+# Extract the words and frequency change values
+words = [word for word, _ in sorted_words]
+freq_changes = [change for _, change in sorted_words]
+
+# Create a figure and axis
+fig, ax = plt.subplots(figsize=(12, 6))
+
+# Plot the frequency change values as a bar plot
+ax.bar(words, freq_changes, color='blue')
+
+# Set labels and title
+ax.set_xlabel('Words')
+ax.set_ylabel('Relative Frequency Change')
+ax.set_title('Frequency Change of Words Over Time')
+
+# Rotate x-axis labels for better visibility
+plt.xticks(rotation=45, ha='right')
+
+plt.tight_layout()
+plt.show()
+
 
 
 # 6. Explore and visualize emerging topics from user reviews across time (using techniques like topic modeling or clustering)
