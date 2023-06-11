@@ -3,8 +3,6 @@ from datetime import datetime
 import nltk
 import pyLDAvis as pyLDAvis
 from gensim import corpora
-nltk.download('stopwords')
-nltk.download('punkt')
 from nltk.corpus import stopwords
 from nltk.probability import FreqDist
 from nltk.stem import PorterStemmer
@@ -21,10 +19,11 @@ from nltk.corpus import stopwords as greek_stopwords
 import gensim.corpora
 import pyLDAvis.gensim_models as gensimvis
 import pyLDAvis
-import matplotlib.pyplot as plt
 from pymongo import MongoClient
 import matplotlib.patches as patches
-
+from collections import defaultdict
+nltk.download('stopwords')
+nltk.download('punkt')
 
 # Connect to MongoDB
 client = MongoClient("mongodb://localhost:27017")
@@ -82,8 +81,9 @@ plt.show()
 # Fetch reviews from MongoDB and convert to a list
 reviews = list(collection.find())
 
+
+
 # 2. Identify the top-10 rated and bottom-10 rated locations
-import matplotlib.pyplot as plt
 
 locations = {}  # Dictionary to store location ratings and counts
 
@@ -153,10 +153,8 @@ plt.show()
 
 
 
-
 # 3. Which locations have the highest increase or decrease in rating over the years?
 # Consider calculating the yearly average and percentage change per location.
-import matplotlib.pyplot as plt
 
 yearly_ratings = {}
 
@@ -246,11 +244,7 @@ plt.show()
 
 
 
-
-
-# 4. Visualize the most common words, bi-grams, and tri-grams across all reviews
-# through a bar chart or word cloud. Also, visualize the most common words,
-# bi-grams, and tri-grams in 5-star versus 1-star reviews.
+# 4. Visualize the most common words, bi-grams, and tri-grams across all reviews through a bar chart or word cloud. Also, visualize the most common words, bi-grams, and tri-grams in 5-star versus 1-star reviews.
 
 # Set a random seed for consistent colors in word clouds
 random.seed(42)
@@ -391,11 +385,8 @@ plt.tight_layout()
 plt.show()
 
 
-# 5.
-import matplotlib.pyplot as plt
-from collections import defaultdict
-from nltk.corpus import stopwords
-import re
+
+# 5. Which are the 10 fastest growing and the 10 fastest shrinking words (based on usage frequency) in TripAdvisor reviews over time?
 
 # Fetch reviews from MongoDB and convert to a list
 reviews = list(collection.find())
@@ -501,8 +492,6 @@ plt.show()
 # 6. Explore and visualize emerging topics from user reviews across time (using techniques like topic modeling or clustering)
 
 # Download the necessary resources
-nltk.download('punkt')
-nltk.download('stopwords')
 nltk.download('wordnet')
 
 # Define the stop words list for English
