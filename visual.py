@@ -244,7 +244,9 @@ plt.show()
 
 
 
-# 4. Visualize the most common words, bi-grams, and tri-grams across all reviews through a bar chart or word cloud. Also, visualize the most common words, bi-grams, and tri-grams in 5-star versus 1-star reviews.
+# 4. Visualize the most common words, bi-grams, and tri-grams across all reviews
+# through a bar chart or word cloud. Also, visualize the most common words,
+# bi-grams, and tri-grams in 5-star versus 1-star reviews.
 
 # Set a random seed for consistent colors in word clouds
 random.seed(42)
@@ -387,7 +389,6 @@ plt.show()
 
 
 # 5. Which are the 10 fastest growing and the 10 fastest shrinking words (based on usage frequency) in TripAdvisor reviews over time?
-
 # Fetch reviews from MongoDB and convert to a list
 reviews = list(collection.find())
 
@@ -487,6 +488,115 @@ if len(top_10_shrinking_words) < 10:
 plt.tight_layout()
 plt.show()
 
+#second approach for 5
+# 5. Which are the 10 fastest growing and the 10 fastest shrinking words (based on usage frequency) in TripAdvisor reviews over time?
+# Fetch reviews from MongoDB and convert to a list
+reviews = list(collection.find())
+
+# Create a dictionary to store word frequencies over time
+word_frequencies = defaultdict(lambda: defaultdict(int))
+
+# Stop word removal
+stop_words = set(stopwords.words("english"))
+stop_words.update(["i", "the", "she", "her", "we", "tonia"])  # Add custom words to remove
+
+# Calculate word frequencies over time
+for review in reviews:
+    text = review.get("review_text", "")
+    rating = review.get("review_rating", 0)
+    year = review.get("review_date").year if "review_date" in review else 0
+
+    if text and rating and year:
+        words = text.lower().split()
+        words = [word for word in words if word not in stop_words and not bool(re.match(r'\d', word))]  # Remove stop words and numbers
+        for word in words:
+            word_frequencies[word][year] += 1
+
+# Calculate the growth rate for each word over time
+word_growth_rates = defaultdict(list)
+for word, frequencies in word_frequencies.items():
+    sorted_years = sorted(frequencies.keys())
+    if len(sorted_years) > 1:
+        for i in range(1, len(sorted_years)):
+            year_diff = sorted_years[i] - sorted_years[i-1]
+            growth_rate = (frequencies[sorted_years[i]] - frequencies[sorted_years[i-1]]) / year_diff
+            word_growth_rates[word].append((sorted_years[i], growth_rate))
+
+# Calculate the shrink rate for each word over time
+word_shrink_rates = defaultdict(list)
+for word, frequencies in word_frequencies.items():
+    sorted_years = sorted(frequencies.keys())
+    if len(sorted_years) > 1:
+        for i in range(1, len(sorted_years)):
+            year_diff = sorted_years[i] - sorted_years[i-1]
+            shrink_rate = (frequencies[sorted_years[i-1]] - frequencies[sorted_years[i]]) / year_diff
+            word_shrink_rates[word].append((sorted_years[i], shrink_rate))
+
+# Sort words based on their growth rates
+sorted_growth_rates = sorted(word_growth_rates.items(), key=lambda x: x[1][-1][1], reverse=True)
+sorted_shrink_rates = sorted(word_shrink_rates.items(), key=lambda x: x[1][-1][1])
+
+# Get the top 10 growing and shrinking words
+top_10_growing_words = sorted_growth_rates[:10]
+top_10_shrinking_words = sorted_shrink_rates[:10]
+
+# Plotting the growth rates of the top 10 growing words
+fig, axs = plt.subplots(5, 2, figsize=(12, 18))
+plt.suptitle("Top 10 Growing Words", fontsize=16)  # Add title for the growth plot
+
+for i, (word, growth_rates) in enumerate(top_10_growing_words):
+    row = i // 2
+    col = i % 2
+    ax = axs[row, col]
+
+    years, rates = zip(*growth_rates)
+    ax.plot(years, rates, label=word, color=f"C{i}")
+    ax.set_xlabel("Year", fontsize=8)
+    ax.set_ylabel("Growth Rate", fontsize=8)
+    ax.set_title(word, fontsize=10)
+    ax.grid(axis="y", linestyle="--", alpha=0.7)
+    ax.tick_params(labelsize=6)
+    ax.legend(fontsize=6, loc='upper left')
+
+# Remove empty subplots
+if len(top_10_growing_words) < 10:
+    for i in range(len(top_10_growing_words), 10):
+        row = i // 2
+        col = i % 2
+        fig.delaxes(axs[row, col])
+
+plt.tight_layout()
+plt.show()
+
+
+# Plotting the shrink rates of the top 10 shrinking words
+fig, axs = plt.subplots(5, 2, figsize=(12, 18))
+plt.suptitle("Top 10 Shrinking Words", fontsize=16)  # Add title for the shrink plot
+
+for i, (word, shrink_rates) in enumerate(top_10_shrinking_words):
+    row = i // 2
+    col = i % 2
+    ax = axs[row, col]
+
+    years, rates = zip(*shrink_rates)
+    ax.plot(years, rates, label=word, color=f"C{i}")
+    ax.set_xlabel("Year", fontsize=8)
+    ax.set_ylabel("Shrink Rate", fontsize=8)
+    ax.set_title(word, fontsize=10)
+    ax.grid(axis="y", linestyle="--", alpha=0.7)
+    ax.tick_params(labelsize=6)
+    ax.legend(fontsize=6, loc='upper left')
+
+# Remove empty subplots
+if len(top_10_shrinking_words) < 10:
+    for i in range(len(top_10_shrinking_words), 10):
+        row = i // 2
+        col = i % 2
+        fig.delaxes(axs[row, col])
+
+plt.tight_layout()
+plt.show()
+
 
 
 # 6. Explore and visualize emerging topics from user reviews across time (using techniques like topic modeling or clustering)
@@ -546,3 +656,5 @@ print(lda_model.print_topics())
 
 # Show the plot
 plt.show()
+
+
