@@ -23,6 +23,8 @@ import pyLDAvis.gensim_models as gensimvis
 import pyLDAvis
 import matplotlib.pyplot as plt
 from pymongo import MongoClient
+import matplotlib.patches as patches
+
 
 # Connect to MongoDB
 client = MongoClient("mongodb://localhost:27017")
@@ -389,92 +391,107 @@ plt.tight_layout()
 plt.show()
 
 
-
-# 5. Identify the 10 fastest growing and 10 fastest shrinking words over time (based on usage frequency)
-# Code to calculate the frequency change of words over time goes here
-from nltk.corpus import stopwords
-from nltk import FreqDist, word_tokenize
-import string
+# 5.
 import matplotlib.pyplot as plt
+from collections import defaultdict
+from nltk.corpus import stopwords
+import re
 
-# Fetch reviews from MongoDB
-reviews = collection.find()
+# Fetch reviews from MongoDB and convert to a list
+reviews = list(collection.find())
 
-# Extract the review text and review date from each document
-review_texts = []
-review_dates = []
+# Create a dictionary to store word frequencies over time
+word_frequencies = defaultdict(lambda: defaultdict(int))
+
+# Stop word removal
+stop_words = set(stopwords.words("english"))
+stop_words.update(["i", "the", "she", "her", "we", "tonia"])  # Add custom words to remove
+
+# Calculate word frequencies over time
 for review in reviews:
-    if "review_text" in review:
-        review_texts.append(review["review_text"])
-    if "review_date" in review:
-        review_dates.append(review["review_date"])
+    text = review.get("review_text", "")
+    rating = review.get("review_rating", 0)
+    year = review.get("review_date").year if "review_date" in review else 0
 
-# Combine review text and review date into a list of tuples
-review_data = list(zip(review_texts, review_dates))
+    if text and rating and year:
+        words = text.lower().split()
+        words = [word for word in words if word not in stop_words and not bool(re.match(r'\d', word))]  # Remove stop words and numbers
+        for word in words:
+            word_frequencies[word][year] += 1
 
-# Sort the review data based on review date
-review_data.sort(key=lambda x: x[1])
+# Calculate the growth rate for each word over time
+word_growth_rates = defaultdict(list)
+for word, frequencies in word_frequencies.items():
+    sorted_years = sorted(frequencies.keys())
+    if len(sorted_years) > 1:
+        for i in range(1, len(sorted_years)):
+            year_diff = sorted_years[i] - sorted_years[i-1]
+            growth_rate = (frequencies[sorted_years[i]] - frequencies[sorted_years[i-1]]) / year_diff
+            word_growth_rates[word].append((sorted_years[i], growth_rate))
 
-# Initialize variables
-word_frequency = {}
-total_words = 0
+# Sort words based on their growth rates
+sorted_growth_rates = sorted(word_growth_rates.items(), key=lambda x: x[1][-1][1], reverse=True)
+sorted_shrink_rates = sorted(word_growth_rates.items(), key=lambda x: x[1][-1][1])
 
-# Iterate over the review data
-for review_text, review_date in review_data:
-    # Tokenize the text into words
-    words = word_tokenize(review_text)
+# Get the top 10 growing and shrinking words
+top_10_growing_words = sorted_growth_rates[:10]
+top_10_shrinking_words = sorted_shrink_rates[:10]
 
-    # Remove stopwords and punctuation marks
-    stop_words = set(stopwords.words('english'))
-    words = [word for word in words if word not in stop_words and word not in string.punctuation]
+# Plotting the growth rates of the top 10 growing words
+fig, axs = plt.subplots(5, 2, figsize=(12, 18))
+plt.suptitle("Top 10 Growing Words", fontsize=16)  # Add title for the growth plot
 
-    # Update word frequencies
-    for word in words:
-        if word not in word_frequency:
-            word_frequency[word] = 0
-        word_frequency[word] += 1
-        total_words += 1
 
-# Calculate the frequency change of each word
-freq_change = {}
-for word, frequency in word_frequency.items():
-    freq_change[word] = frequency / total_words
+for i, (word, growth_rates) in enumerate(top_10_growing_words):
+    row = i // 2
+    col = i % 2
+    ax = axs[row, col]
 
-# Sort the words based on frequency change
-sorted_words = sorted(freq_change.items(), key=lambda x: x[1], reverse=True)
+    years, rates = zip(*growth_rates)
+    ax.plot(years, rates, label=word, color=f"C{i}")
+    ax.set_xlabel("Year", fontsize=8)
+    ax.set_ylabel("Growth Rate", fontsize=8)
+    ax.set_title(word, fontsize=10)
+    ax.grid(axis="y", linestyle="--", alpha=0.7)
+    ax.tick_params(labelsize=6)
+    ax.legend(fontsize=6, loc='upper left')
 
-# Get the top 10 growing words
-top_growing_words = sorted_words[:10]
+# Remove empty subplots
+if len(top_10_growing_words) < 10:
+    for i in range(len(top_10_growing_words), 10):
+        row = i // 2
+        col = i % 2
+        fig.delaxes(axs[row, col])
 
-# Get the top 10 shrinking words
-top_shrinking_words = sorted_words[-10:]
+plt.tight_layout()
+plt.show()
 
-# Print the results
-print("Top 10 Growing Words:")
-for word, change in top_growing_words:
-    print(f"Word: {word}, Frequency: {change}")
 
-print("\nTop 10 Shrinking Words:")
-for word, change in top_shrinking_words:
-    print(f"Word: {word}, Frequency: {change}")
+# Plotting the shrink rates of the top 10 shrinking words
+fig, axs = plt.subplots(5, 2, figsize=(12, 18))
+plt.suptitle("Top 10 Shrinking Words", fontsize=16)  # Add title for the shrink plot
 
-# Extract the words and frequency change values
-words = [word for word, _ in sorted_words]
-freq_changes = [change for _, change in sorted_words]
 
-# Create a figure and axis
-fig, ax = plt.subplots(figsize=(12, 6))
+for i, (word, shrink_rates) in enumerate(top_10_shrinking_words):
+    row = i // 2
+    col = i % 2
+    ax = axs[row, col]
 
-# Plot the frequency change values as a bar plot
-ax.bar(words, freq_changes, color='blue')
+    years, rates = zip(*shrink_rates)
+    ax.plot(years, rates, label=word, color=f"C{i}")
+    ax.set_xlabel("Year", fontsize=8)
+    ax.set_ylabel("Shrink Rate", fontsize=8)
+    ax.set_title(word, fontsize=10)
+    ax.grid(axis="y", linestyle="--", alpha=0.7)
+    ax.tick_params(labelsize=6)
+    ax.legend(fontsize=6, loc='upper left')
 
-# Set labels and title
-ax.set_xlabel('Words')
-ax.set_ylabel('Relative Frequency Change')
-ax.set_title('Frequency Change of Words Over Time')
-
-# Rotate x-axis labels for better visibility
-plt.xticks(rotation=45, ha='right')
+# Remove empty subplots
+if len(top_10_shrinking_words) < 10:
+    for i in range(len(top_10_shrinking_words), 10):
+        row = i // 2
+        col = i % 2
+        fig.delaxes(axs[row, col])
 
 plt.tight_layout()
 plt.show()
