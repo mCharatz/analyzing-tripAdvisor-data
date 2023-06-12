@@ -25,8 +25,6 @@ from collections import defaultdict
 import pandas as pd
 import matplotlib.dates as mdates
 
-nltk.download('stopwords')
-nltk.download('punkt')
 
 # Connect to MongoDB
 client = MongoClient("mongodb://localhost:27017")
@@ -107,6 +105,13 @@ else:
 
 # 2. Identify the top-10 rated and bottom-10 rated locations
 
+nltk.download('stopwords')
+nltk.download('punkt')
+
+# Fetch reviews from MongoDB and convert to a list
+reviews = list(collection.find())
+
+# Process review data
 locations = {}  # Dictionary to store location ratings and counts
 
 for review in reviews:
@@ -125,53 +130,61 @@ filtered_locations = {
     location: data for location, data in locations.items() if data["count"] >= min_ratings_threshold
 }
 
-sorted_locations = sorted(filtered_locations.items(), key=lambda x: (x[1]["count"], x[1]["rating"]), reverse=True)
-top_10_rated = sorted_locations[:10]
-bottom_10_rated = sorted_locations[-10:]
+if len(filtered_locations) == 0:
+    print("No locations meet the minimum ratings threshold.")
+else:
+    sorted_locations = sorted(filtered_locations.items(), key=lambda x: (x[1]["count"], x[1]["rating"]), reverse=True)
+    top_10_rated = sorted_locations[:10]
+    bottom_10_rated = sorted_locations[-10:]
 
-# Extract location names, average ratings, and counts for visualization
-top_locations = [location for location, _ in top_10_rated]
-top_ratings = [(data["rating"] / data["count"]) for _, data in top_10_rated]
-top_counts = [data["count"] for _, data in top_10_rated]
+    # Extract location names, average ratings, and counts for visualization
+    top_locations = [location for location, _ in top_10_rated]
+    top_ratings = [(data["rating"] / data["count"]) for _, data in top_10_rated]
+    top_counts = [data["count"] for _, data in top_10_rated]
 
-bottom_locations = [location for location, _ in bottom_10_rated]
-bottom_ratings = [(data["rating"] / data["count"]) for _, data in bottom_10_rated]
-bottom_counts = [data["count"] for _, data in bottom_10_rated]
+    bottom_locations = [location for location, _ in bottom_10_rated]
+    bottom_ratings = [(data["rating"] / data["count"]) for _, data in bottom_10_rated]
+    bottom_counts = [data["count"] for _, data in bottom_10_rated]
 
-print("Top 10 Rated Locations:")
-for location, data in top_10_rated:
-    print(location, "- Average Rating:", data["rating"] / data["count"], "- Number of Ratings:", data["count"])
-print("\nBottom 10 Rated Locations:")
-for location, data in bottom_10_rated:
-    print(location, "- Average Rating:", data["rating"] / data["count"], "- Number of Ratings:", data["count"])
+    if len(top_10_rated) > 0:
+        print("Top 10 Rated Locations:")
+        for location, data in top_10_rated:
+            print(location, "- Average Rating:", data["rating"] / data["count"], "- Number of Ratings:", data["count"])
 
-# Visualize the top-10 rated locations
-plt.figure(figsize=(12, 8))
-sns.barplot(x=top_ratings, y=top_locations, palette='coolwarm_r')
-plt.xlabel('Average Rating')
-plt.ylabel('Locations')
-plt.title('Top 10 Rated Locations')
+    if len(bottom_10_rated) > 0:
+        print("\nBottom 10 Rated Locations:")
+        for location, data in bottom_10_rated:
+            print(location, "- Average Rating:", data["rating"] / data["count"], "- Number of Ratings:", data["count"])
 
-# Add data labels to the bars
-for i, rating in enumerate(top_ratings):
-    plt.text(rating + 0.1, i, f'{rating:.2f}', va='center', color='black')
+    # Visualize the top-10 rated locations
+    if len(top_10_rated) > 0:
+        plt.figure(figsize=(12, 8))
+        sns.barplot(x=top_ratings, y=top_locations, palette='coolwarm_r')
+        plt.xlabel('Average Rating')
+        plt.ylabel('Locations')
+        plt.title('Top 10 Rated Locations')
 
-plt.tight_layout()
-plt.show()
+        # Add data labels to the bars
+        for i, rating in enumerate(top_ratings):
+            plt.text(rating + 0.1, i, f'{rating:.2f}', va='center', color='black')
 
-# Visualize the bottom-10 rated locations
-plt.figure(figsize=(12, 8))
-sns.barplot(x=bottom_ratings, y=bottom_locations, palette='coolwarm')
-plt.xlabel('Average Rating')
-plt.ylabel('Locations')
-plt.title('Bottom 10 Rated Locations')
+        plt.tight_layout()
+        plt.show()
 
-# Add data labels to the bars
-for i, rating in enumerate(bottom_ratings):
-    plt.text(rating + 0.1, i, f'{rating:.2f}', va='center', color='black')
+    # Visualize the bottom-10 rated locations
+    if len(bottom_10_rated) > 0:
+        plt.figure(figsize=(12, 8))
+        sns.barplot(x=bottom_ratings, y=bottom_locations, palette='coolwarm')
+        plt.xlabel('Average Rating')
+        plt.ylabel('Locations')
+        plt.title('Bottom 10 Rated Locations')
 
-plt.tight_layout()
-plt.show()
+        # Add data labels to the bars
+        for i, rating in enumerate(bottom_ratings):
+            plt.text(rating + 0.1, i, f'{rating:.2f}', va='center', color='black')
+
+        plt.tight_layout()
+        plt.show()
 
 
 
