@@ -27,6 +27,8 @@ from collections import defaultdict
 import pandas as pd
 import matplotlib.dates as mdates
 
+import string
+
 
 # Connect to MongoDB
 client = MongoClient("mongodb://localhost:27017")
@@ -406,7 +408,6 @@ plt.show()
 
 # Calculate frequency distributions  of the bigrams across all reviews
 tokenized_reviews = [nltk.word_tokenize(review) for review in review_texts]
-import string
 punctuation = set(string.punctuation) #punctuation marks
 stop_words = set(stopwords.words())
 # Extract bigrams from the tokenized reviews
@@ -423,20 +424,20 @@ flattened_bigrams = [bigram for sublist in filtered_bigrams for bigram in sublis
 # Calculate the frequency distribution of the bigrams
 freq_dist_bigrams = FreqDist(flattened_bigrams)
 # Get the most common bigrams
-most_common_bigrams = freq_dist_bigrams.most_common(10)  # Adjust the number as needed
+most_common_bigrams = freq_dist_bigrams.most_common(10) 
 labels = [' '.join(bigram) for bigram, _ in most_common_bigrams]
 frequencies = [count for _, count in most_common_bigrams]
 
 # Plot the bar chart
 plt.bar(labels, frequencies)
-plt.xticks(rotation=90)  # Rotate the x-axis labels for better readability
+plt.xticks(rotation=90)  
 plt.xlabel("Bigram")
 plt.ylabel("Frequency")
 plt.title("Most Common Bigrams")
 plt.tight_layout()
 plt.show()
 
-
+#do the same for trigrams
 trigrams = [list(ngrams(review, 3)) for review in tokenized_reviews]
 filtered_trigrams = [
     [(w1.lower(), w2.lower(), w3.lower()) for (w1, w2, w3) in review
@@ -451,23 +452,18 @@ filtered_trigrams = [
 ]
 flattened_trigrams = [trigram for sublist in filtered_trigrams for trigram in sublist]
 freq_dist_trigrams = FreqDist(flattened_trigrams)
-most_common_trigrams = freq_dist_trigrams.most_common(10)  # Adjust the number as needed
+most_common_trigrams = freq_dist_trigrams.most_common(10)  
 labels = [' '.join(trigram) for trigram, _ in most_common_trigrams]
 frequencies = [count for _, count in most_common_trigrams]
 
 # Plot the bar chart
 plt.bar(labels, frequencies)
-plt.xticks(rotation=45)  # Rotate the x-axis labels for better readability
+plt.xticks(rotation=45)  
 plt.xlabel("Trigram")
 plt.ylabel("Frequency")
 plt.title("Most Common Trigrams")
 plt.tight_layout()
 plt.show()
-
-
-
-
-
 
 
 # 5. Which are the 10 fastest growing and the 10 fastest shrinking words (based on usage frequency) in TripAdvisor reviews over time?
