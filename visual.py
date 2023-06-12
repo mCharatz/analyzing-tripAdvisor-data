@@ -22,6 +22,9 @@ import pyLDAvis
 from pymongo import MongoClient
 import matplotlib.patches as patches
 from collections import defaultdict
+import pandas as pd
+import matplotlib.dates as mdates
+
 nltk.download('stopwords')
 nltk.download('punkt')
 
@@ -177,11 +180,15 @@ for review in reviews:
 location_changes = {}
 for location_id, ratings in yearly_ratings.items():
     sorted_ratings = sorted(ratings, key=lambda x: x[0])
-    yearly_avg_ratings = [rating for year, rating in sorted_ratings]
+    yearly_avg_ratings = pd.DataFrame(sorted_ratings, columns=['year', 'rating'])
+    yearly_avg_ratings = yearly_avg_ratings.groupby('year')['rating'].mean().tolist()
+
     percentage_changes = [
-        (yearly_avg_ratings[i] - yearly_avg_ratings[i-1]) / yearly_avg_ratings[i-1] * 100
+        ((yearly_avg_ratings[i] - yearly_avg_ratings[i - 1]) / yearly_avg_ratings[i - 1]) * 100
+        if yearly_avg_ratings[i - 1] != 0 else 0
         for i in range(1, len(yearly_avg_ratings))
     ]
+
     location_changes[location_id] = (sorted_ratings, yearly_avg_ratings, percentage_changes)
 
 # Sort locations based on the total percentage change
@@ -217,7 +224,7 @@ for location_id, changes in top_increase_locations:
     years = [year for year, _ in sorted_ratings]
     location_name = location_id  # Replace with the code to retrieve location name based on ID
 
-    plt.plot(years, yearly_avg_ratings, marker='o', label=location_name)
+    plt.plot(years[:len(yearly_avg_ratings)], yearly_avg_ratings, marker='o', label=location_name)
 
 plt.xlabel("Year")
 plt.ylabel("Yearly Average Rating")
@@ -233,7 +240,7 @@ for location_id, changes in top_decrease_locations:
     years = [year for year, _ in sorted_ratings]
     location_name = location_id  # Replace with the code to retrieve location name based on ID
 
-    plt.plot(years, yearly_avg_ratings, marker='o', label=location_name)
+    plt.plot(years[:len(yearly_avg_ratings)], yearly_avg_ratings, marker='o', label=location_name)
 
 plt.xlabel("Year")
 plt.ylabel("Yearly Average Rating")
@@ -656,5 +663,7 @@ print(lda_model.print_topics())
 
 # Show the plot
 plt.show()
+
+
 
 
