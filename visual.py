@@ -133,7 +133,7 @@ filtered_locations = {
 if len(filtered_locations) == 0:
     print("No locations meet the minimum ratings threshold.")
 else:
-    sorted_locations = sorted(filtered_locations.items(), key=lambda x: (x[1]["count"], x[1]["rating"]), reverse=True)
+    sorted_locations = sorted(filtered_locations.items(), key=lambda x: x[1]["rating"] / x[1]["count"], reverse=True)
     top_10_rated = sorted_locations[:10]
     bottom_10_rated = sorted_locations[-10:]
 
