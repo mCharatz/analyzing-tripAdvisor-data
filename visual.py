@@ -10,6 +10,8 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from nltk import FreqDist, word_tokenize, bigrams, trigrams
+from nltk.util import ngrams
+
 from wordcloud import WordCloud
 import random
 import re
@@ -309,6 +311,7 @@ freq_dist_all = FreqDist(all_words)
 
 # Bar chart of the most common words across all reviews
 most_common_words_all = freq_dist_all.most_common(10)
+print(most_common_words_all)
 x, y = zip(*most_common_words_all)
 x = [word for word in x]
 
@@ -401,29 +404,69 @@ plt.axis("off")
 plt.title("Word Cloud of Most Common Words in 1-star Reviews", fontsize=14)
 plt.show()
 
-# Calculate frequency distributions for bi-grams and tri-grams across all reviews
-all_bigrams = list(bigrams(all_words))
-all_trigrams = list(trigrams(all_words))
+# Calculate frequency distributions  of the bigrams across all reviews
+tokenized_reviews = [nltk.word_tokenize(review) for review in review_texts]
+import string
+punctuation = set(string.punctuation) #punctuation marks
+stop_words = set(stopwords.words())
+# Extract bigrams from the tokenized reviews
+bigrams = [list(ngrams(review, 2)) for review in tokenized_reviews]
+filtered_bigrams = [
+    [(w1.lower(), w2.lower()) for (w1, w2) in review if w1.lower() not in stop_words
+                                                     and w2.lower() not in stop_words
+                                                     and w1 not in punctuation
+                                                     and w2 not in punctuation
+                                                     and not w2.endswith("'s")]
+    for review in bigrams
+]
+flattened_bigrams = [bigram for sublist in filtered_bigrams for bigram in sublist]
+# Calculate the frequency distribution of the bigrams
+freq_dist_bigrams = FreqDist(flattened_bigrams)
+# Get the most common bigrams
+most_common_bigrams = freq_dist_bigrams.most_common(10)  # Adjust the number as needed
+labels = [' '.join(bigram) for bigram, _ in most_common_bigrams]
+frequencies = [count for _, count in most_common_bigrams]
 
-freq_dist_bigrams = FreqDist(all_bigrams)
-freq_dist_trigrams = FreqDist(all_trigrams)
-
-# Bar chart of the most common bi-grams across all reviews
-most_common_bigrams = freq_dist_bigrams.most_common(10)
-x, y = zip(*most_common_bigrams)
-
-x = [' '.join(words) for words, _ in x] # Join the words in each bi-gram
-
-plt.figure(figsize=(12, 6))
-plt.bar(x, y, color="magenta")
-plt.xlabel("Bi-grams", fontsize=12)
-plt.ylabel("Frequency", fontsize=12)
-plt.title("Most Common Bi-grams across All Reviews", fontsize=14)
-plt.xticks(rotation=45, fontsize=10)
-plt.yticks(fontsize=10)
-plt.grid(axis="y", linestyle="--", alpha=0.7)
+# Plot the bar chart
+plt.bar(labels, frequencies)
+plt.xticks(rotation=90)  # Rotate the x-axis labels for better readability
+plt.xlabel("Bigram")
+plt.ylabel("Frequency")
+plt.title("Most Common Bigrams")
 plt.tight_layout()
 plt.show()
+
+
+trigrams = [list(ngrams(review, 3)) for review in tokenized_reviews]
+filtered_trigrams = [
+    [(w1.lower(), w2.lower(), w3.lower()) for (w1, w2, w3) in review
+                                             if w1.lower() not in stop_words
+                                             and w2.lower() not in stop_words
+                                             and w3.lower() not in stop_words
+                                             and w1 not in punctuation
+                                             and w2 not in punctuation
+                                             and w3 not in punctuation
+                                             and not w3.endswith("'s")]
+    for review in trigrams
+]
+flattened_trigrams = [trigram for sublist in filtered_trigrams for trigram in sublist]
+freq_dist_trigrams = FreqDist(flattened_trigrams)
+most_common_trigrams = freq_dist_trigrams.most_common(10)  # Adjust the number as needed
+labels = [' '.join(trigram) for trigram, _ in most_common_trigrams]
+frequencies = [count for _, count in most_common_trigrams]
+
+# Plot the bar chart
+plt.bar(labels, frequencies)
+plt.xticks(rotation=45)  # Rotate the x-axis labels for better readability
+plt.xlabel("Trigram")
+plt.ylabel("Frequency")
+plt.title("Most Common Trigrams")
+plt.tight_layout()
+plt.show()
+
+
+
+
 
 
 
