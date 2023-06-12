@@ -424,13 +424,13 @@ flattened_bigrams = [bigram for sublist in filtered_bigrams for bigram in sublis
 # Calculate the frequency distribution of the bigrams
 freq_dist_bigrams = FreqDist(flattened_bigrams)
 # Get the most common bigrams
-most_common_bigrams = freq_dist_bigrams.most_common(10) 
+most_common_bigrams = freq_dist_bigrams.most_common(10)
 labels = [' '.join(bigram) for bigram, _ in most_common_bigrams]
 frequencies = [count for _, count in most_common_bigrams]
 
 # Plot the bar chart
 plt.bar(labels, frequencies)
-plt.xticks(rotation=90)  
+plt.xticks(rotation=90)
 plt.xlabel("Bigram")
 plt.ylabel("Frequency")
 plt.title("Most Common Bigrams")
@@ -452,13 +452,13 @@ filtered_trigrams = [
 ]
 flattened_trigrams = [trigram for sublist in filtered_trigrams for trigram in sublist]
 freq_dist_trigrams = FreqDist(flattened_trigrams)
-most_common_trigrams = freq_dist_trigrams.most_common(10)  
+most_common_trigrams = freq_dist_trigrams.most_common(10)
 labels = [' '.join(trigram) for trigram, _ in most_common_trigrams]
 frequencies = [count for _, count in most_common_trigrams]
 
 # Plot the bar chart
 plt.bar(labels, frequencies)
-plt.xticks(rotation=45)  
+plt.xticks(rotation=45)
 plt.xlabel("Trigram")
 plt.ylabel("Frequency")
 plt.title("Most Common Trigrams")
@@ -567,7 +567,6 @@ plt.tight_layout()
 plt.show()
 
 #second approach for 5
-# 5. Which are the 10 fastest growing and the 10 fastest shrinking words (based on usage frequency) in TripAdvisor reviews over time?
 # Fetch reviews from MongoDB and convert to a list
 reviews = list(collection.find())
 
@@ -576,60 +575,55 @@ word_frequencies = defaultdict(lambda: defaultdict(int))
 
 # Stop word removal
 stop_words = set(stopwords.words("english"))
-stop_words.update(["i", "the", "she", "her", "we", "tonia"])  # Add custom words to remove
+stop_words.update(["i", "the", "she", "her", "we", "-", "_", ".", "που"])  # Add custom words to remove
 
 # Calculate word frequencies over time
 for review in reviews:
     text = review.get("review_text", "")
     rating = review.get("review_rating", 0)
-    year = review.get("review_date").year if "review_date" in review else 0
+    date = review.get("review_date")
 
-    if text and rating and year:
+    if text and rating and date:
         words = text.lower().split()
-        words = [word for word in words if word not in stop_words and not bool(re.match(r'\d', word))]  # Remove stop words and numbers
+        words = [word for word in words if
+                 word not in stop_words and not bool(re.match(r'\d', word))]  # Remove stop words and numbers
+        year_month = datetime.strftime(date, "%Y-%m")
         for word in words:
-            word_frequencies[word][year] += 1
+            word_frequencies[word][year_month] += 1
 
-# Calculate the growth rate for each word over time
+# Calculate the growth rate for each word per month
 word_growth_rates = defaultdict(list)
 for word, frequencies in word_frequencies.items():
-    sorted_years = sorted(frequencies.keys())
-    if len(sorted_years) > 1:
-        for i in range(1, len(sorted_years)):
-            year_diff = sorted_years[i] - sorted_years[i-1]
-            growth_rate = (frequencies[sorted_years[i]] - frequencies[sorted_years[i-1]]) / year_diff
-            word_growth_rates[word].append((sorted_years[i], growth_rate))
-
-# Calculate the shrink rate for each word over time
-word_shrink_rates = defaultdict(list)
-for word, frequencies in word_frequencies.items():
-    sorted_years = sorted(frequencies.keys())
-    if len(sorted_years) > 1:
-        for i in range(1, len(sorted_years)):
-            year_diff = sorted_years[i] - sorted_years[i-1]
-            shrink_rate = (frequencies[sorted_years[i-1]] - frequencies[sorted_years[i]]) / year_diff
-            word_shrink_rates[word].append((sorted_years[i], shrink_rate))
+    sorted_dates = sorted(frequencies.keys(), key=lambda x: datetime.strptime(x, "%Y-%m"))
+    if len(sorted_dates) > 1:
+        for i in range(1, len(sorted_dates)):
+            date_diff = (datetime.strptime(sorted_dates[i], "%Y-%m") - datetime.strptime(sorted_dates[i - 1],
+                                                                                         "%Y-%m")).days
+            growth_rate = (frequencies[sorted_dates[i]] - frequencies[sorted_dates[i - 1]]) / date_diff
+            word_growth_rates[word].append((sorted_dates[i], growth_rate))
 
 # Sort words based on their growth rates
 sorted_growth_rates = sorted(word_growth_rates.items(), key=lambda x: x[1][-1][1], reverse=True)
-sorted_shrink_rates = sorted(word_shrink_rates.items(), key=lambda x: x[1][-1][1])
+sorted_shrink_rates = sorted(word_growth_rates.items(), key=lambda x: x[1][-1][1])
 
-# Get the top 10 growing and shrinking words
+
+# Get the top 10 growing and shrinking words per month
 top_10_growing_words = sorted_growth_rates[:10]
 top_10_shrinking_words = sorted_shrink_rates[:10]
 
-# Plotting the growth rates of the top 10 growing words
+# Plotting the growth rates of the top 10 growing words per month
 fig, axs = plt.subplots(5, 2, figsize=(12, 18))
-plt.suptitle("Top 10 Growing Words", fontsize=16)  # Add title for the growth plot
+plt.suptitle("Top 10 Growing Words per Month", fontsize=16)  # Add title for the growth plot
 
 for i, (word, growth_rates) in enumerate(top_10_growing_words):
     row = i // 2
     col = i % 2
     ax = axs[row, col]
 
-    years, rates = zip(*growth_rates)
-    ax.plot(years, rates, label=word, color=f"C{i}")
-    ax.set_xlabel("Year", fontsize=8)
+    dates, rates = zip(*growth_rates)
+    dates = [datetime.strptime(date, "%Y-%m") for date in dates]  # Convert dates to datetime objects
+    ax.plot(dates, rates, label=word, color=f"C{i}")
+    ax.set_xlabel("Date", fontsize=8)
     ax.set_ylabel("Growth Rate", fontsize=8)
     ax.set_title(word, fontsize=10)
     ax.grid(axis="y", linestyle="--", alpha=0.7)
@@ -646,19 +640,19 @@ if len(top_10_growing_words) < 10:
 plt.tight_layout()
 plt.show()
 
-
-# Plotting the shrink rates of the top 10 shrinking words
+# Plotting the shrink rates of the top 10 shrinking words per month
 fig, axs = plt.subplots(5, 2, figsize=(12, 18))
-plt.suptitle("Top 10 Shrinking Words", fontsize=16)  # Add title for the shrink plot
+plt.suptitle("Top 10 Shrinking Words per Month", fontsize=16)  # Add title for the shrink plot
 
 for i, (word, shrink_rates) in enumerate(top_10_shrinking_words):
     row = i // 2
     col = i % 2
     ax = axs[row, col]
 
-    years, rates = zip(*shrink_rates)
-    ax.plot(years, rates, label=word, color=f"C{i}")
-    ax.set_xlabel("Year", fontsize=8)
+    dates, rates = zip(*shrink_rates)
+    dates = [datetime.strptime(date, "%Y-%m") for date in dates]  # Convert dates to datetime objects
+    ax.plot(dates, rates, label=word, color=f"C{i}")
+    ax.set_xlabel("Date", fontsize=8)
     ax.set_ylabel("Shrink Rate", fontsize=8)
     ax.set_title(word, fontsize=10)
     ax.grid(axis="y", linestyle="--", alpha=0.7)
