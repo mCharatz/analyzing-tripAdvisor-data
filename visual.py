@@ -56,7 +56,7 @@ for review in reviews:
 
 # Basic visualizations
 
-# 1. Visualize the number of monthly reviews over time
+# 1. Visualize the number of monthly reviews over time for all locations
 monthly_reviews = {}
 
 for date in review_dates:
@@ -81,10 +81,29 @@ plt.xticks(np.arange(0, len(sorted_months), interval), [sorted_months[i] for i i
 plt.tight_layout()
 plt.show()
 
-# Fetch reviews from MongoDB and convert to a list
-reviews = list(collection.find())
+# Find the month with the most reviews
+max_reviews_month = max(monthly_reviews, key=monthly_reviews.get)
+max_reviews_count = monthly_reviews[max_reviews_month]
 
+print("Month with the Most Reviews:", max_reviews_month)
+print("Number of Reviews:", max_reviews_count)
 
+# Analyze seasonality in the volume of reviews
+review_counts_list = list(monthly_reviews.values())
+
+# Calculate quarterly averages of review counts
+quarterly_averages = []
+for i in range(0, len(review_counts_list), 3):
+    quarterly_avg = sum(review_counts_list[i:i+3]) / 3
+    quarterly_averages.append(quarterly_avg)
+
+# Detect seasonality by comparing quarterly averages
+seasonality_detected = all(quarterly_averages[i] > quarterly_averages[i+1] for i in range(len(quarterly_averages)-1))
+
+if seasonality_detected:
+    print("Seasonality Detected in the Volume of Reviews.")
+else:
+    print("No Seasonality Detected in the Volume of Reviews.")
 
 # 2. Identify the top-10 rated and bottom-10 rated locations
 
