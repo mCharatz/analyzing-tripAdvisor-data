@@ -107,6 +107,121 @@ if seasonality_detected:
 else:
     print("No Seasonality Detected in the Volume of Reviews.")
 
+
+# 2nd approach
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+import pandas as pd
+from statsmodels.tsa.stattools import acf, pacf
+from pymongo import MongoClient
+
+# Connect to MongoDB
+client = MongoClient("mongodb://localhost:27017")
+db = client["reviews"]
+collection = db["reviews"]
+
+# Fetch reviews from MongoDB
+reviews = collection.find()
+
+# Process review data
+review_dates = []
+review_ratings = []
+review_texts = []
+
+for review in reviews:
+    if "review_date" in review:
+        review_dates.append(review["review_date"])
+    if "review_rating" in review:
+        review_ratings.append(review["review_rating"])
+    if "review_text" in review:
+        review_texts.append(review["review_text"])
+
+# Create a DataFrame with review dates and ratings
+df = pd.DataFrame({"Date": review_dates, "Rating": review_ratings})
+
+# Set the 'Date' column as the index
+df.set_index("Date", inplace=True)
+
+# Resample the data to monthly frequency and count the number of reviews
+monthly_reviews = df.resample("M").size()
+
+# Visualize the number of monthly reviews over time for all locations
+plt.figure(figsize=(10, 6))
+sns.set_style("whitegrid")
+monthly_reviews.plot(marker='o', color='steelblue')
+plt.xlabel("Month")
+plt.ylabel("Number of Reviews")
+plt.title("Number of Monthly Reviews")
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+# Find the month with the most reviews
+max_reviews_month = monthly_reviews.idxmax().strftime("%Y-%m")
+max_reviews_count = monthly_reviews.max()
+
+print("Month with the Most Reviews:", max_reviews_month)
+print("Number of Reviews:", max_reviews_count)
+
+# Analyze seasonality in the volume of reviews
+
+# Autocorrelation plot
+plt.figure(figsize=(10, 6))
+lags = 24  # Number of lags to consider
+acf_values = acf(monthly_reviews, nlags=lags)
+
+plt.stem(range(lags + 1), acf_values)
+plt.xlabel("Lag")
+plt.ylabel("Autocorrelation")
+plt.title("Autocorrelation Plot")
+plt.tight_layout()
+plt.show()
+
+# Partial Autocorrelation plot
+plt.figure(figsize=(10, 6))
+pacf_values = pacf(monthly_reviews, nlags=lags)
+
+plt.stem(range(lags + 1), pacf_values)
+plt.xlabel("Lag")
+plt.ylabel("Partial Autocorrelation")
+plt.title("Partial Autocorrelation Plot")
+plt.tight_layout()
+plt.show()
+
+# Detect seasonality by analyzing autocorrelation and partial autocorrelation
+acf_cutoff = 0.2  # Adjust the cutoff as needed
+
+seasonality_detected = any(acf_values[1:] > acf_cutoff) or any(pacf_values[1:] > acf_cutoff)
+
+if seasonality_detected:
+    print("Seasonality Detected in the Volume of Reviews.")
+
+    # Identify the specific type of seasonality
+    if any(acf_values[1:] > acf_cutoff):
+        print("Monthly Seasonality Detected.")
+
+    if any(pacf_values[1:] > acf_cutoff):
+        print("Yearly Seasonality Detected.")
+
+        # Add more conditions to detect other types of seasonality
+        if any(acf_values[1:13] > acf_cutoff):
+            print("Yearly Seasonality with a 12-Month Pattern Detected.")
+
+            if any(acf_values[1:6] > acf_cutoff):
+                print("Bi-Monthly Seasonality Detected.")
+
+            if any(acf_values[1:4] > acf_cutoff):
+                print("Seasonality with a 3-Month Pattern Detected.")
+
+            # Add more conditions to detect other types of seasonality
+
+        else:
+            print("No Yearly Seasonality Detected.")
+
+    else:
+        print("No Seasonality Detected in the Volume of Reviews.")
+
 # 2. Identify the top-10 rated and bottom-10 rated locations
 
 nltk.download('stopwords')
