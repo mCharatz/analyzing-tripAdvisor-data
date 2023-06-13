@@ -590,96 +590,98 @@ word_frequencies = defaultdict(lambda: defaultdict(int))
 
 # Stop word removal
 stop_words = set(stopwords.words("english"))
-stop_words.update(["i", "the", "she", "her", "we", "tonia"])  # Add custom words to remove
+stop_words.update(["-"])
 
 # Calculate word frequencies over time
 for review in reviews:
     text = review.get("review_text", "")
     rating = review.get("review_rating", 0)
-    year = review.get("review_date").year if "review_date" in review else 0
+    date = review.get("review_date")
 
-    if text and rating and year:
+    if text and rating and date:
         words = text.lower().split()
-        words = [word for word in words if word not in stop_words and not bool(re.match(r'\d', word))]  # Remove stop words and numbers
+        words = [word for word in words if
+                 word not in stop_words and not bool(re.match(r'\d', word))]  # Remove stop words and numbers
+        year_month = datetime.strftime(date, "%Y-%m")
         for word in words:
-            word_frequencies[word][year] += 1
+            word_frequencies[word][year_month] += 1
 
-# Calculate the growth rate for each word over time
+# Calculate the growth rate for each word per month
 word_growth_rates = defaultdict(list)
 for word, frequencies in word_frequencies.items():
-    sorted_years = sorted(frequencies.keys())
-    if len(sorted_years) > 1:
-        for i in range(1, len(sorted_years)):
-            year_diff = sorted_years[i] - sorted_years[i-1]
-            growth_rate = (frequencies[sorted_years[i]] - frequencies[sorted_years[i-1]]) / year_diff
-            word_growth_rates[word].append((sorted_years[i], growth_rate))
-
-# Sort words based on their growth rates
-sorted_growth_rates = sorted(word_growth_rates.items(), key=lambda x: x[1][-1][1], reverse=True)
-sorted_shrink_rates = sorted(word_growth_rates.items(), key=lambda x: x[1][-1][1])
-
-# Get the top 10 growing and shrinking words
-top_10_growing_words = sorted_growth_rates[:10]
-top_10_shrinking_words = sorted_shrink_rates[:10]
-
-# Plotting the growth rates of the top 10 growing words
-fig, axs = plt.subplots(5, 2, figsize=(12, 18))
-plt.suptitle("Top 10 Growing Words", fontsize=16)  # Add title for the growth plot
+    sorted_dates = sorted(frequencies.keys(), key=lambda x: datetime.strptime(x, "%Y-%m"))
+    if len(sorted_dates) > 1:
+        for i in range(1, len(sorted_dates)):
+            date_diff = (datetime.strptime(sorted_dates[i], "%Y-%m") - datetime.strptime(sorted_dates[i - 1],
+                                                                                         "%Y-%m")).days
+            growth_rate = (frequencies[sorted_dates[i]] - frequencies[sorted_dates[i - 1]]) / date_diff
+            word_growth_rates[word].append((sorted_dates[i], growth_rate))
 
 
-for i, (word, growth_rates) in enumerate(top_10_growing_words):
-    row = i // 2
-    col = i % 2
-    ax = axs[row, col]
+# Calculate the max growth rates for each key in word_growth_rates
+max_rates = {key: max(t[1] for t in tuples) for key, tuples in word_growth_rates.items()}
+# Sort the word_growth_rates based on max values in descending order
+sorted_max_rates = dict(sorted(max_rates.items(), key=lambda x: x[1], reverse=True))
+# Retrieve the keys of the first 10 elements 
+top_10_keys = list(sorted_max_rates.keys())[:10]
+# Create a defaultdict(list) with the top 10 elements
+top_10_growing_words = defaultdict(list)
+for key in top_10_keys:
+    top_10_growing_words[key] = word_growth_rates[key]
+top_10_growing_words = list(top_10_growing_words.items())
 
-    years, rates = zip(*growth_rates)
-    ax.plot(years, rates, label=word, color=f"C{i}")
-    ax.set_xlabel("Year", fontsize=8)
-    ax.set_ylabel("Growth Rate", fontsize=8)
-    ax.set_title(word, fontsize=10)
-    ax.grid(axis="y", linestyle="--", alpha=0.7)
-    ax.tick_params(labelsize=6)
-    ax.legend(fontsize=6, loc='upper left')
+print('The 10 fastest growing words across the entire period are:')
+print(top_10_keys)
 
-# Remove empty subplots
-if len(top_10_growing_words) < 10:
-    for i in range(len(top_10_growing_words), 10):
+# Calculate the min growth rates for each key in word_growth_rates
+min_rates = {key: min(t[1] for t in tuples) for key, tuples in word_growth_rates.items()}
+# Sort the word_growth_rates based on min values in ascending order
+sorted_min_rates = dict(sorted(min_rates.items(), key=lambda x: x[1]))
+# Retrieve the keys of the first 10 elements from my_dict according to the sorted mean values
+shrinking_10_keys = list(sorted_min_rates.keys())[:10]
+# Create a defaultdict(list) with the top 10 elements
+top_10_shrinking_words = defaultdict(list)
+for key in shrinking_10_keys:
+    top_10_shrinking_words[key] = word_growth_rates[key]
+top_10_shrinking_words = list(top_10_shrinking_words.items())
+
+print('The 10 fastest shrinking words across the entire period are:')
+print(shrinking_10_keys)
+
+# Plotting the growth rates of the top 10 growing/ shrinking words
+lists = [top_10_growing_words, top_10_shrinking_words]
+for plot_list in lists:
+    fig, axs = plt.subplots(5, 2, figsize=(12, 18))
+    if plot_list == top_10_growing_words:
+        plt.suptitle("The growth rates for the ten fastest growing words", fontsize=16)  
+    else:
+        plt.suptitle("The growth rates for the ten fastest shrinking words", fontsize=16)
+    for i, (word, growth_rates) in enumerate(plot_list):
         row = i // 2
         col = i % 2
-        fig.delaxes(axs[row, col])
+        ax = axs[row, col]
 
-plt.tight_layout()
-plt.show()
+        dates, rates = zip(*growth_rates)
+        dates = [datetime.strptime(date, "%Y-%m") for date in dates]  # Convert dates to datetime objects
+        ax.plot(dates, rates, label=word, color=f"C{i}")
+        ax.set_xlabel("Date", fontsize=8)
+        ax.set_ylabel("Growth Rate", fontsize=8)
+        ax.set_title(word, fontsize=10)
+        ax.grid(axis="y", linestyle="--", alpha=0.7)
+        ax.tick_params(labelsize=6)
+        ax.legend(fontsize=6, loc='upper left')
+
+    # Remove empty subplots
+    if len(top_10_growing_words) < 10:
+        for i in range(len(top_10_growing_words), 10):
+            row = i // 2
+            col = i % 2
+            fig.delaxes(axs[row, col])
+
+    plt.tight_layout()
+    plt.show()
 
 
-# Plotting the shrink rates of the top 10 shrinking words
-fig, axs = plt.subplots(5, 2, figsize=(12, 18))
-plt.suptitle("Top 10 Shrinking Words", fontsize=16)  # Add title for the shrink plot
-
-
-for i, (word, shrink_rates) in enumerate(top_10_shrinking_words):
-    row = i // 2
-    col = i % 2
-    ax = axs[row, col]
-
-    years, rates = zip(*shrink_rates)
-    ax.plot(years, rates, label=word, color=f"C{i}")
-    ax.set_xlabel("Year", fontsize=8)
-    ax.set_ylabel("Shrink Rate", fontsize=8)
-    ax.set_title(word, fontsize=10)
-    ax.grid(axis="y", linestyle="--", alpha=0.7)
-    ax.tick_params(labelsize=6)
-    ax.legend(fontsize=6, loc='upper left')
-
-# Remove empty subplots
-if len(top_10_shrinking_words) < 10:
-    for i in range(len(top_10_shrinking_words), 10):
-        row = i // 2
-        col = i % 2
-        fig.delaxes(axs[row, col])
-
-plt.tight_layout()
-plt.show()
 
 #second approach for 5
 # Fetch reviews from MongoDB and convert to a list
@@ -716,6 +718,7 @@ for word, frequencies in word_frequencies.items():
                                                                                          "%Y-%m")).days
             growth_rate = (frequencies[sorted_dates[i]] - frequencies[sorted_dates[i - 1]]) / date_diff
             word_growth_rates[word].append((sorted_dates[i], growth_rate))
+
 
 # Sort words based on their growth rates
 sorted_growth_rates = sorted(word_growth_rates.items(), key=lambda x: x[1][-1][1], reverse=True)
