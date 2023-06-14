@@ -443,10 +443,13 @@ plt.grid(axis="x", linestyle="--", alpha=0.7)
 plt.tight_layout()
 plt.show()
 
+
 # Word cloud of the most common words across all reviews
 wordcloud_all = WordCloud(width=800, height=600, background_color="white",
-                          colormap="Blues", random_state=42).generate_from_frequencies(freq_dist_all)
+                          colormap="Blues", random_state=42, collocations=False,
+                          max_font_size=150, max_words=50).generate_from_frequencies(freq_dist_all)
 
+# Word cloud of the most common words in 5-star reviews
 plt.figure(figsize=(10, 6))
 plt.imshow(wordcloud_all, interpolation="bilinear")
 plt.axis("off")
@@ -471,8 +474,11 @@ for review in reviews:
 freq_dist_five_star = FreqDist(five_star_words)
 freq_dist_one_star = FreqDist(one_star_words)
 
+# Define custom words to remove
+custom_words = ["I", "us"]
+
 # Bar chart of the most common words in 5-star reviews
-most_common_words_five_star = freq_dist_five_star.most_common(10)
+most_common_words_five_star = [(word, count) for (word, count) in freq_dist_five_star.most_common(10) if word not in custom_words]
 x, y = zip(*most_common_words_five_star)
 
 plt.figure(figsize=(12, 6))
@@ -487,8 +493,11 @@ plt.tight_layout()
 plt.show()
 
 # Word cloud of the most common words in 5-star reviews
+filtered_freq_dist_five_star = {word: count for word, count in freq_dist_five_star.items() if word not in custom_words}
+
 wordcloud_five_star = WordCloud(width=800, height=600, background_color="white",
-colormap="Oranges", random_state=42).generate_from_frequencies(freq_dist_five_star)
+                               colormap="Oranges", random_state=42, collocations=False,
+                               max_font_size=150, max_words=50).generate_from_frequencies(filtered_freq_dist_five_star)
 
 plt.figure(figsize=(10, 6))
 plt.imshow(wordcloud_five_star, interpolation="bilinear")
@@ -497,7 +506,7 @@ plt.title("Word Cloud of Most Common Words in 5-star Reviews", fontsize=14)
 plt.show()
 
 # Bar chart of the most common words in 1-star reviews
-most_common_words_one_star = freq_dist_one_star.most_common(10)
+most_common_words_one_star = [(word, count) for (word, count) in freq_dist_one_star.most_common(10) if word not in custom_words]
 x, y = zip(*most_common_words_one_star)
 
 plt.figure(figsize=(12, 6))
@@ -512,8 +521,11 @@ plt.tight_layout()
 plt.show()
 
 # Word cloud of the most common words in 1-star reviews
+filtered_freq_dist_one_star = {word: count for word, count in freq_dist_one_star.items() if word not in custom_words}
+
 wordcloud_one_star = WordCloud(width=800, height=600, background_color="white",
-colormap="Greens", random_state=42).generate_from_frequencies(freq_dist_one_star)
+                              colormap="Greens", random_state=42, collocations=False,
+                              max_font_size=150, max_words=50).generate_from_frequencies(filtered_freq_dist_one_star)
 
 plt.figure(figsize=(10, 6))
 plt.imshow(wordcloud_one_star, interpolation="bilinear")
@@ -552,7 +564,7 @@ plt.title("Most Common Bigrams")
 plt.tight_layout()
 plt.show()
 
-#do the same for trigrams
+# do the same for trigrams
 trigrams = [list(ngrams(review, 3)) for review in tokenized_reviews]
 filtered_trigrams = [
     [(w1.lower(), w2.lower(), w3.lower()) for (w1, w2, w3) in review
