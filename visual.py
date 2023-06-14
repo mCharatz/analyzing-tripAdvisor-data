@@ -802,6 +802,11 @@ greek_stop_words = set(stopwords.words('greek'))
 
 # Combine the English and Greek stop words
 stop_words = english_stop_words.union(greek_stop_words)
+stop_words = list(stop_words)
+
+stop_words.extend(['πολύ', 'από', 'της', 'είναι', 'u',\
+                   'u', 'one', 'also', 'day', 'would', 'really',  'still'])
+
 
 # Initialize the lemmatizer
 lemmatizer = WordNetLemmatizer()
@@ -833,7 +838,7 @@ dictionary = gensim.corpora.Dictionary(texts)
 corpus = [dictionary.doc2bow(text) for text in texts]
 
 # Build the LDA model
-lda_model = gensim.models.LdaModel(corpus, id2word=dictionary, num_topics=10)
+lda_model = gensim.models.LdaModel(corpus, id2word=dictionary, num_topics=2)
 
 # Visualize the topics using the modified LDAvis visualization
 topic_data = gensimvis.prepare(lda_model, corpus, dictionary)
