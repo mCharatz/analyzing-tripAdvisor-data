@@ -816,9 +816,7 @@ greek_stop_words = set(stopwords.words('greek'))
 stop_words = english_stop_words.union(greek_stop_words)
 stop_words = list(stop_words)
 
-stop_words.extend(['πολύ', 'από', 'της', 'είναι', 'u',\
-                   'u', 'one', 'also', 'day', 'would', 'really',  'still'])
-
+stop_words.extend(['πολύ', 'από', 'της', 'είναι', 'u', 'u', 'one', 'also', 'day', 'would', 'really', 'still'])
 
 # Initialize the lemmatizer
 lemmatizer = WordNetLemmatizer()
@@ -843,14 +841,27 @@ for review in reviews:
         texts.append(preprocessed_text)
         review_dates.append(review_date)
 
-# Create a dictionary from the tokenized texts
-dictionary = gensim.corpora.Dictionary(texts)
+# Count word frequencies
+from collections import defaultdict
+word_frequencies = defaultdict(int)
+for text in texts:
+    for word in text:
+        word_frequencies[word] += 1
 
-# Create a corpus from the tokenized texts
-corpus = [dictionary.doc2bow(text) for text in texts]
+# Exclude stopwords and words with frequency > 2800
+exclude_words = stop_words + [word for word, freq in word_frequencies.items() if freq > 2800]
 
-# Build the LDA model
-lda_model = gensim.models.LdaModel(corpus, id2word=dictionary, num_topics=2)
+# Remove excluded words from the texts
+filtered_texts = [[word for word in text if word not in exclude_words] for text in texts]
+
+# Create a new dictionary from the filtered texts
+dictionary = gensim.corpora.Dictionary(filtered_texts)
+
+# Create a new corpus from the filtered texts
+corpus = [dictionary.doc2bow(text) for text in filtered_texts]
+
+# Build the LDA model using the new corpus and dictionary
+lda_model = gensim.models.LdaModel(corpus, id2word=dictionary, num_topics=3)
 
 # Visualize the topics using the modified LDAvis visualization
 topic_data = gensimvis.prepare(lda_model, corpus, dictionary)
@@ -862,6 +873,7 @@ pyLDAvis.save_html(topic_data, 'lda_visualization.html')
 print(lda_model.print_topics())
 
 # Show the plot
+import matplotlib.pyplot as plt
 plt.show()
 
 
