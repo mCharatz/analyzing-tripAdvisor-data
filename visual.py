@@ -704,7 +704,7 @@ word_frequencies = defaultdict(lambda: defaultdict(int))
 
 # Stop word removal
 stop_words = set(stopwords.words("english"))
-stop_words.update(["i", "the", "she", "her", "we", "-", "_", ".", "που"])  # Add custom words to remove
+stop_words.update(["i", "the", "she", "her", "we", "-", "_", ".", "που", "us", "να", "από", "το", "ότι", "μου"])  # Add custom words to remove
 
 # Calculate word frequencies over time
 for review in reviews:
